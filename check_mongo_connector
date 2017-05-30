@@ -1,0 +1,70 @@
+#!/usr/bin/env python
+
+#
+# Check mongodb connector 
+#
+# Raffael Sahli <sahli@gyselroth.com>
+# gyselroth GmbH, 2017
+#
+# Requirements:
+#  * Python module: pymongo >= 2.6
+#
+
+import optparse
+from pymongo import MongoClient
+import sys
+import time
+from mongo_connector import errors, util
+
+parser = optparse.OptionParser()
+parser.add_option('-H', action="store", dest="mongodb_server", default="mongodb://localhost:27017", 
+    help="[Default: mongodb://localhost:27017] MongoDB host URI")
+parser.add_option('-f', action="store", dest="oplog_file", default="/var/lib/mongo-connector/oplog.log", 
+    help="[Default: /var/lib/mongo-connector/oplog.log] Path to mongo-connector oplog file (oplogFile)")
+parser.add_option('-w', action="store", dest="warning", default=30, type="int", 
+    help="[Default: 30] Warning offset in seconds")
+parser.add_option('-c', action="store", dest="critical", default=60, type="int", 
+    help="[Default: 60] Critical offset in seconds")
+
+(options, args) = parser.parse_args(args=None, values=None)
+
+try: 
+    client = MongoClient(options.mongodb_server)
+    db = client.local
+except Exception, e:
+    print "failed contact mongodb ["+str(e)+"]"
+    sys.exit(3)
+    
+try:
+    mongodb_last = db.oplog.rs.find().limit(1).sort([('$natural', -1)])[0]['ts'].time
+except Exception, e:
+    print "failed grab last oplog entry from mongodb ["+str(e)+"]"
+    sys.exit(3)
+    
+try: 
+    s = eval(open(options.oplog_file, 'r').read())
+    ts = util.long_to_bson_ts(s[1]).time
+except Exception, e:
+    print "failed read timestamp from mongo-connector oplog file ["+str(e)+"]"
+    sys.exit(3)
+
+if ts > mongodb_last:
+    print 'mongo-connector cached optlog timestamp is greater than the last timestamp from mongodb oplog'
+    sys.exit(3)
+elif ts == mongodb_last:
+    print 'mongo-connector is up to date, last action='+str(mongodb_last)
+    sys.exit(0)
+else:
+    now = int(time.time())
+    
+    if now-mongodb_last >= options.critical:
+        behind = mongodb_last - ts
+        print 'mongo-connector is critical, '+str(behind)+'s lagging behind'
+        sys.exit(2)
+    elif now-mongodb_last >= options.warning:
+        behind = mongodb_last - ts
+        print 'mongo-connector is warning, '+str(behind)+'s lagging behind'
+        sys.exit(1)
+    else:
+        print 'mongo-connector is up to date, last action='+str(mongodb_last)
+        sys.exit(0)
