@@ -1,4 +1,4 @@
-# Monitoring Plugin: Mongo-Connector
+# Monitoring Plugin: mongo-connector
 
 ### Description
 
