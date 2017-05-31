@@ -48,10 +48,7 @@ except Exception, e:
     print "failed read timestamp from mongo-connector oplog file ["+str(e)+"]"
     sys.exit(3)
 
-if ts > mongodb_last:
-    print 'mongo-connector cached optlog timestamp is greater than the last timestamp from mongodb oplog'
-    sys.exit(3)
-elif ts == mongodb_last:
+if ts >= mongodb_last:
     print 'mongo-connector is up to date, last action='+str(mongodb_last)
     sys.exit(0)
 else:
