@@ -3,8 +3,8 @@
 #
 # Check mongodb connector 
 #
-# Raffael Sahli <sahli@gyselroth.com>
-# gyselroth GmbH, 2017
+# @author  Raffael Sahli <sahli@gyselroth.com>
+# @license MIT, gyselroth GmbH 2017
 #
 # Requirements:
 #  * Python module: pymongo >= 2.6
